@@ -1,133 +1,144 @@
--- ⚙️ Blade Ball GUI付き Aimbot + ESP (Team対応)
+-- Blade Ball Utility GUI (日本語UI + Executor対応)
+-- 制作者: @syuu_0316
+
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
 
--- ========== GUI ==========
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BladeBallMenu"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = game.CoreGui
+-- GUI作成
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 250, 0, 300)
+MainFrame.Position = UDim2.new(0.35, 0, 0.3, 0)
+MainFrame.BackgroundColor3 = Color3.new(1,1,1)
+MainFrame.Active = true
+MainFrame.Draggable = true
 
-local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 200, 0, 150)
-Frame.Position = UDim2.new(0.4, 0, 0.3, 0)
-Frame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-Frame.BorderSizePixel = 2
-Frame.Parent = ScreenGui
-
-local Title = Instance.new("TextLabel")
+local Title = Instance.new("TextLabel", MainFrame)
 Title.Size = UDim2.new(1, 0, 0, 30)
-Title.BackgroundTransparency = 1
-Title.Text = "Blade Ball"
+Title.BackgroundColor3 = Color3.fromRGB(200,200,200)
+Title.Text = "Blade Ball ユーティリティ"
 Title.TextColor3 = Color3.new(0,0,0)
-Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 20
-Title.Parent = Frame
 
-local AimbotButton = Instance.new("TextButton")
-AimbotButton.Size = UDim2.new(1, -20, 0, 40)
-AimbotButton.Position = UDim2.new(0, 10, 0, 40)
-AimbotButton.BackgroundColor3 = Color3.new(0,0,0)
-AimbotButton.TextColor3 = Color3.new(1,1,1)
-AimbotButton.Text = "Aimbot: OFF"
-AimbotButton.Parent = Frame
+-- 最小化ボタン
+local MinButton = Instance.new("TextButton", MainFrame)
+MinButton.Size = UDim2.new(0, 30, 0, 30)
+MinButton.Position = UDim2.new(1, -35, 0, 0)
+MinButton.Text = "―"
+MinButton.BackgroundColor3 = Color3.fromRGB(180,180,180)
 
-local ESPButton = Instance.new("TextButton")
-ESPButton.Size = UDim2.new(1, -20, 0, 40)
-ESPButton.Position = UDim2.new(0, 10, 0, 90)
-ESPButton.BackgroundColor3 = Color3.new(0,0,0)
-ESPButton.TextColor3 = Color3.new(1,1,1)
-ESPButton.Text = "ESP: OFF"
-ESPButton.Parent = Frame
-
--- ========== ESP ==========
-local function createESP(char, color)
-    if char:FindFirstChild("HumanoidRootPart") and not char:FindFirstChild("ESP_Highlight") then
-        local h = Instance.new("Highlight")
-        h.Name = "ESP_Highlight"
-        h.FillColor = color
-        h.OutlineColor = Color3.new(1,1,1)
-        h.FillTransparency = 0.5
-        h.OutlineTransparency = 0
-        h.Parent = char
-    end
-end
-
-local function setupESP(plr)
-    plr.CharacterAdded:Connect(function(char)
-        task.wait(1)
-        if ESPEnabled then
-            local color = Color3.fromRGB(255,0,0)
-            if plr.Team and LocalPlayer.Team and plr.Team == LocalPlayer.Team then
-                color = Color3.fromRGB(0,255,0)
-            end
-            createESP(char, color)
+-- ボタン生成関数
+local function createToggleButton(name, yPos)
+    local btn = Instance.new("TextButton", MainFrame)
+    btn.Size = UDim2.new(1, -20, 0, 30)
+    btn.Position = UDim2.new(0, 10, 0, yPos)
+    btn.BackgroundColor3 = Color3.new(0,0,0)
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.Text = name.."：OFF"
+    btn.AutoButtonColor = false
+    local state = false
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        btn.Text = name.."："..(state and "ON" or "OFF")
+        btn.BackgroundColor3 = state and Color3.fromRGB(0,150,0) or Color3.new(0,0,0)
+        -- 各機能のON/OFF処理 ↓
+        if name == "🎯 オートエイム" then
+            _G.AutoAim = state
+        elseif name == "🛡 自動パリィ（近距離）" then
+            _G.ParryClose = state
+        elseif name == "⚡ 自動パリィ（即反応）" then
+            _G.ParryFast = state
+        elseif name == "👀 ESP" then
+            _G.ESP = state
+        elseif name == "✨ 無敵" then
+            _G.God = state
         end
     end)
 end
 
--- ========== Aimbot ==========
-local aimEnabled = false
-local ESPEnabled = false
-local aimRadius = 300
+-- 各ボタン配置
+createToggleButton("🎯 オートエイム", 50)
+createToggleButton("🛡 自動パリィ（近距離）", 90)
+createToggleButton("⚡ 自動パリィ（即反応）", 130)
+createToggleButton("👀 ESP", 170)
+createToggleButton("✨ 無敵", 210)
 
-local function getClosestEnemy()
-    local closest, closestDist = nil, math.huge
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            local sameTeam = (p.Team and LocalPlayer.Team and p.Team == LocalPlayer.Team)
-            if not sameTeam then
-                local pos = Camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
-                local mousePos = Vector2.new(mouse.X, mouse.Y)
-                local dist = (Vector2.new(pos.X,pos.Y) - mousePos).Magnitude
-                if dist < closestDist and dist < aimRadius then
-                    closest = p
-                    closestDist = dist
-                end
-            end
+-- 最小化ボタン機能
+local minimized = false
+MinButton.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    for _, child in ipairs(MainFrame:GetChildren()) do
+        if child:IsA("TextButton") and child ~= MinButton then
+            child.Visible = not minimized
         end
     end
-    return closest
-end
+    MainFrame.Size = minimized and UDim2.new(0,250,0,30) or UDim2.new(0,250,0,300)
+end)
 
+-- ESP機能（シンプル表示）
 RunService.RenderStepped:Connect(function()
-    if aimEnabled then
-        local target = getClosestEnemy()
-        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.HumanoidRootPart.Position)
-        end
-    end
-end)
-
--- ========== ボタン動作 ==========
-AimbotButton.MouseButton1Click:Connect(function()
-    aimEnabled = not aimEnabled
-    AimbotButton.Text = "Aimbot: " .. (aimEnabled and "ON" or "OFF")
-end)
-
-ESPButton.MouseButton1Click:Connect(function()
-    ESPEnabled = not ESPEnabled
-    ESPButton.Text = "ESP: " .. (ESPEnabled and "ON" or "OFF")
-    if ESPEnabled then
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer then
-                setupESP(p)
-                if p.Character then
-                    local color = Color3.fromRGB(255,0,0)
-                    if p.Team and LocalPlayer.Team and p.Team == LocalPlayer.Team then
-                        color = Color3.fromRGB(0,255,0)
-                    end
-                    createESP(p.Character, color)
+    if _G.ESP then
+        for _,plr in pairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Head") then
+                if not plr.Character.Head:FindFirstChild("BillboardGui") then
+                    local bb = Instance.new("BillboardGui", plr.Character.Head)
+                    bb.Name = "BillboardGui"
+                    bb.Size = UDim2.new(0,100,0,20)
+                    bb.AlwaysOnTop = true
+                    local tl = Instance.new("TextLabel", bb)
+                    tl.Size = UDim2.new(1,0,1,0)
+                    tl.BackgroundTransparency = 1
+                    tl.Text = plr.Name
+                    tl.TextColor3 = Color3.new(1,0,0)
                 end
             end
         end
     else
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p.Character and p.Character:FindFirstChild("ESP_Highlight") then
-                p.Character.ESP_Highlight:Destroy()
+        for _,plr in pairs(Players:GetPlayers()) do
+            if plr.Character and plr.Character:FindFirstChild("Head") then
+                local bb = plr.Character.Head:FindFirstChild("BillboardGui")
+                if bb then bb:Destroy() end
             end
         end
+    end
+end)
+
+-- オートエイム（ボールに照準を合わせる）
+RunService.RenderStepped:Connect(function()
+    if _G.AutoAim then
+        local mouse = LocalPlayer:GetMouse()
+        local ball = workspace:FindFirstChild("Ball") -- ゲーム内のボール名が違う場合は変更
+        if ball and ball:FindFirstChild("Position") then
+            local cam = workspace.CurrentCamera
+            local screenPos = cam:WorldToViewportPoint(ball.Position)
+            mouse.Icon = "rbxassetid://0"
+            mouse.X = screenPos.X
+            mouse.Y = screenPos.Y
+        end
+    end
+end)
+
+-- 自動パリィ（近距離 + 即反応）
+RunService.Heartbeat:Connect(function()
+    if _G.ParryClose or _G.ParryFast then
+        local char = LocalPlayer.Character
+        local ball = workspace:FindFirstChild("Ball")
+        if char and char:FindFirstChild("HumanoidRootPart") and ball and ball:IsA("BasePart") then
+            local dist = (ball.Position - char.HumanoidRootPart.Position).Magnitude
+            if (_G.ParryClose and dist < 10) or (_G.ParryFast and dist < 30) then
+                local tool = char:FindFirstChildOfClass("Tool")
+                if tool and tool:FindFirstChild("Handle") then
+                    tool:Activate()
+                end
+            end
+        end
+    end
+end)
+
+-- 無敵モード
+RunService.Heartbeat:Connect(function()
+    if _G.God and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.Health = math.huge
     end
 end)
