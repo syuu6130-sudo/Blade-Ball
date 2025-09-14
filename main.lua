@@ -1,9 +1,9 @@
---// Blade Ball GUI 修正版 by ChatGPT
+--// Blade Ball GUI 最終版 by ChatGPT
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
-local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 --// メインUI
 local ScreenGui = Instance.new("ScreenGui")
@@ -12,7 +12,7 @@ ScreenGui.Parent = game.CoreGui
 ScreenGui.ResetOnSpawn = false
 
 local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 260, 0, 300)
+Frame.Size = UDim2.new(0, 260, 0, 330)
 Frame.Position = UDim2.new(0.7, 0, 0.3, 0)
 Frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
 Frame.BorderSizePixel = 0
@@ -69,6 +69,7 @@ local toggles = {
 	["🎯 オートエイム"] = false,
 	["🛡 自動パリィ（近距離）"] = false,
 	["⚡ 自動パリィ（即反応）"] = false,
+	["💥 自動パリィ（色変化）"] = false,
 	["👀 ESP"] = false,
 	["✨ 無敵（Godモード）"] = false
 }
@@ -96,7 +97,7 @@ for name,_ in pairs(toggles) do
 	createButton(name)
 end
 
---// 最小化機能
+--// 最小化
 local minimized = false
 MinimizeButton.MouseButton1Click:Connect(function()
 	minimized = not minimized
@@ -122,9 +123,7 @@ end
 local function autoAim()
 	local ball = workspace:FindFirstChild("Ball")
 	if ball and ball:IsA("BasePart") then
-		local pos = ball.Position
-		local dir = (pos - LocalPlayer.Character.Head.Position).unit
-		Mouse.Hit = CFrame.new(pos)
+		Mouse.Hit = CFrame.new(ball.Position)
 	end
 end
 
@@ -132,22 +131,32 @@ end
 local function autoParryClose()
 	local ball = workspace:FindFirstChild("Ball")
 	if ball and LocalPlayer.Character and LocalPlayer:DistanceFromCharacter(ball.Position) < 15 then
-		game:GetService("ReplicatedStorage").Remotes.Parry:FireServer()
+		ReplicatedStorage.Remotes.Parry:FireServer()
 	end
 end
 
 --// 自動パリィ（即反応）
 local function autoParryInstant()
 	local ball = workspace:FindFirstChild("Ball")
-	if ball then
-		local vel = ball.AssemblyLinearVelocity
-		if vel.Magnitude > 80 then
-			game:GetService("ReplicatedStorage").Remotes.Parry:FireServer()
-		end
+	if ball and ball.AssemblyLinearVelocity.Magnitude > 80 then
+		ReplicatedStorage.Remotes.Parry:FireServer()
 	end
 end
 
---// 無敵モード
+--// 自動パリィ（色変化）
+local lastColor
+local function autoParryColor()
+	local ball = workspace:FindFirstChild("Ball")
+	if ball and ball:IsA("BasePart") then
+		local nowColor = tostring(ball.Color)
+		if lastColor and lastColor ~= nowColor then
+			ReplicatedStorage.Remotes.Parry:FireServer()
+		end
+		lastColor = nowColor
+	end
+end
+
+--// 無敵
 local function godMode()
 	if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
 		LocalPlayer.Character.Humanoid.Health = 100
@@ -161,6 +170,7 @@ RunService.RenderStepped:Connect(function()
 	if toggles["🎯 オートエイム"] then autoAim() end
 	if toggles["🛡 自動パリィ（近距離）"] then autoParryClose() end
 	if toggles["⚡ 自動パリィ（即反応）"] then autoParryInstant() end
+	if toggles["💥 自動パリィ（色変化）"] then autoParryColor() end
 	if toggles["✨ 無敵（Godモード）"] then godMode() end
 end)
 
