@@ -23,25 +23,89 @@ Frame.Draggable = true
 Title.Parent = Frame
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.BackgroundTransparency = 1
-Title.Text = "Blade Ball (Test GUI)"
+Title.Text = "Blade Ball (syu_u0316)"
 Title.TextColor3 = Color3.fromRGB(0,0,0)
 Title.TextScaled = true
 
--- Aimbotボタン
-AimbotToggle.Parent = Frame
-AimbotToggle.Size = UDim2.new(0.8, 0, 0, 40)
-AimbotToggle.Position = UDim2.new(0.1, 0, 0.3, 0)
-AimbotToggle.BackgroundColor3 = Color3.fromRGB(0,0,0)
-AimbotToggle.TextColor3 = Color3.fromRGB(255,255,255)
-AimbotToggle.Text = "Aimbot: OFF"
+-- 🧠 Blade Ball Aimbot + ESP (Team対応)
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
--- ESPボタン
-ESPToggle.Parent = Frame
-ESPToggle.Size = UDim2.new(0.8, 0, 0, 40)
-ESPToggle.Position = UDim2.new(0.1, 0, 0.55, 0)
-ESPToggle.BackgroundColor3 = Color3.fromRGB(0,0,0)
-ESPToggle.TextColor3 = Color3.fromRGB(255,255,255)
-ESPToggle.Text = "ESP: OFF"
+-- ==== ESP ====
+local function createESP(char, color)
+    if char:FindFirstChild("HumanoidRootPart") and not char:FindFirstChild("ESP_Highlight") then
+        local h = Instance.new("Highlight")
+        h.Name = "ESP_Highlight"
+        h.FillColor = color
+        h.OutlineColor = Color3.new(1,1,1)
+        h.FillTransparency = 0.5
+        h.OutlineTransparency = 0
+        h.Parent = char
+    end
+end
+
+local function setupESP(plr)
+    plr.CharacterAdded:Connect(function(char)
+        task.wait(1)
+        local color = Color3.fromRGB(255,0,0)
+        if plr.Team and LocalPlayer.Team and plr.Team == LocalPlayer.Team then
+            color = Color3.fromRGB(0,255,0)
+        end
+        createESP(char, color)
+    end)
+    if plr.Character then
+        local color = Color3.fromRGB(255,0,0)
+        if plr.Team and LocalPlayer.Team and plr.Team == LocalPlayer.Team then
+            color = Color3.fromRGB(0,255,0)
+        end
+        createESP(plr.Character, color)
+    end
+end
+
+for _, p in ipairs(Players:GetPlayers()) do
+    if p ~= LocalPlayer then
+        setupESP(p)
+    end
+end
+Players.PlayerAdded:Connect(function(p)
+    if p ~= LocalPlayer then
+        setupESP(p)
+    end
+end)
+
+-- ==== Aimbot ====
+local aimEnabled = true
+local aimRadius = 300
+
+local function getClosestEnemy()
+    local closest, closestDist = nil, math.huge
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            local sameTeam = (p.Team and LocalPlayer.Team and p.Team == LocalPlayer.Team)
+            if not sameTeam then
+                local pos = Camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
+                local mousePos = Vector2.new(mouse.X, mouse.Y)
+                local dist = (Vector2.new(pos.X,pos.Y) - mousePos).Magnitude
+                if dist < closestDist and dist < aimRadius then
+                    closest = p
+                    closestDist = dist
+                end
+            end
+        end
+    end
+    return closest
+end
+
+RunService.RenderStepped:Connect(function()
+    if aimEnabled then
+        local target = getClosestEnemy()
+        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.HumanoidRootPart.Position)
+        end
+    end
+end)
 
 -- 機能ON/OFF管理
 local aimbotEnabled = false
