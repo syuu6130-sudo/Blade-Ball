@@ -1,39 +1,48 @@
--- ✅ GUIベース / 白背景 / トグルボタン付き
--- Arceus X Neo 対応
-
--- GUIを作成
-local ScreenGui = Instance.new("ScreenGui")
-local Frame = Instance.new("Frame")
-local Title = Instance.new("TextLabel")
-local AimbotToggle = Instance.new("TextButton")
-local ESPToggle = Instance.new("TextButton")
-
--- GUIをプレイヤーに追加
-ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-
--- フレーム設定
-Frame.Parent = ScreenGui
-Frame.Size = UDim2.new(0, 250, 0, 200)
-Frame.Position = UDim2.new(0.5, -125, 0.5, -100)
-Frame.BackgroundColor3 = Color3.fromRGB(255,255,255)
-Frame.Active = true
-Frame.Draggable = true
-
--- タイトル
-Title.Parent = Frame
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.BackgroundTransparency = 1
-Title.Text = "Blade Ball (syu_u0316)"
-Title.TextColor3 = Color3.fromRGB(0,0,0)
-Title.TextScaled = true
-
--- 🧠 Blade Ball Aimbot + ESP (Team対応)
+-- ⚙️ Blade Ball GUI付き Aimbot + ESP (Team対応)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- ==== ESP ====
+-- ========== GUI ==========
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "BladeBallMenu"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game.CoreGui
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 200, 0, 150)
+Frame.Position = UDim2.new(0.4, 0, 0.3, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Frame.BorderSizePixel = 2
+Frame.Parent = ScreenGui
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundTransparency = 1
+Title.Text = "Blade Ball"
+Title.TextColor3 = Color3.new(0,0,0)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 20
+Title.Parent = Frame
+
+local AimbotButton = Instance.new("TextButton")
+AimbotButton.Size = UDim2.new(1, -20, 0, 40)
+AimbotButton.Position = UDim2.new(0, 10, 0, 40)
+AimbotButton.BackgroundColor3 = Color3.new(0,0,0)
+AimbotButton.TextColor3 = Color3.new(1,1,1)
+AimbotButton.Text = "Aimbot: OFF"
+AimbotButton.Parent = Frame
+
+local ESPButton = Instance.new("TextButton")
+ESPButton.Size = UDim2.new(1, -20, 0, 40)
+ESPButton.Position = UDim2.new(0, 10, 0, 90)
+ESPButton.BackgroundColor3 = Color3.new(0,0,0)
+ESPButton.TextColor3 = Color3.new(1,1,1)
+ESPButton.Text = "ESP: OFF"
+ESPButton.Parent = Frame
+
+-- ========== ESP ==========
 local function createESP(char, color)
     if char:FindFirstChild("HumanoidRootPart") and not char:FindFirstChild("ESP_Highlight") then
         local h = Instance.new("Highlight")
@@ -49,34 +58,19 @@ end
 local function setupESP(plr)
     plr.CharacterAdded:Connect(function(char)
         task.wait(1)
-        local color = Color3.fromRGB(255,0,0)
-        if plr.Team and LocalPlayer.Team and plr.Team == LocalPlayer.Team then
-            color = Color3.fromRGB(0,255,0)
+        if ESPEnabled then
+            local color = Color3.fromRGB(255,0,0)
+            if plr.Team and LocalPlayer.Team and plr.Team == LocalPlayer.Team then
+                color = Color3.fromRGB(0,255,0)
+            end
+            createESP(char, color)
         end
-        createESP(char, color)
     end)
-    if plr.Character then
-        local color = Color3.fromRGB(255,0,0)
-        if plr.Team and LocalPlayer.Team and plr.Team == LocalPlayer.Team then
-            color = Color3.fromRGB(0,255,0)
-        end
-        createESP(plr.Character, color)
-    end
 end
 
-for _, p in ipairs(Players:GetPlayers()) do
-    if p ~= LocalPlayer then
-        setupESP(p)
-    end
-end
-Players.PlayerAdded:Connect(function(p)
-    if p ~= LocalPlayer then
-        setupESP(p)
-    end
-end)
-
--- ==== Aimbot ====
-local aimEnabled = true
+-- ========== Aimbot ==========
+local aimEnabled = false
+local ESPEnabled = false
 local aimRadius = 300
 
 local function getClosestEnemy()
@@ -107,16 +101,33 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- 機能ON/OFF管理
-local aimbotEnabled = false
-local espEnabled = false
-
-AimbotToggle.MouseButton1Click:Connect(function()
-	aimbotEnabled = not aimbotEnabled
-	AimbotToggle.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
+-- ========== ボタン動作 ==========
+AimbotButton.MouseButton1Click:Connect(function()
+    aimEnabled = not aimEnabled
+    AimbotButton.Text = "Aimbot: " .. (aimEnabled and "ON" or "OFF")
 end)
 
-ESPToggle.MouseButton1Click:Connect(function()
-	espEnabled = not espEnabled
-	ESPToggle.Text = "ESP: " .. (espEnabled and "ON" or "OFF")
+ESPButton.MouseButton1Click:Connect(function()
+    ESPEnabled = not ESPEnabled
+    ESPButton.Text = "ESP: " .. (ESPEnabled and "ON" or "OFF")
+    if ESPEnabled then
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer then
+                setupESP(p)
+                if p.Character then
+                    local color = Color3.fromRGB(255,0,0)
+                    if p.Team and LocalPlayer.Team and p.Team == LocalPlayer.Team then
+                        color = Color3.fromRGB(0,255,0)
+                    end
+                    createESP(p.Character, color)
+                end
+            end
+        end
+    else
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p.Character and p.Character:FindFirstChild("ESP_Highlight") then
+                p.Character.ESP_Highlight:Destroy()
+            end
+        end
+    end
 end)
